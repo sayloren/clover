@@ -1,32 +1,48 @@
 # script with implmenting smith-waterman from
 # https://tiefenauer.github.io/blog/smith-waterman/
 
-def make_scoring_matrix(string_a,string_b,match_score,gap_cost):
+def make_scoring_matrix(cost_matrix,string_a,string_b,open_gap,extend_gap):
     '''
     make a matrix of dimensions string_a x string_b
     populated by the match score between the two strings
-    with allowances for gaps
     '''
 
-    # initialze a matrix with 0's
-    matrix_init = np.zeros((len(string_a) + 1, len(string_b) + 1), np.int)
+    # get the lengths of the strings
+    len_a = (len(string_a) + 1
+    len_b = len(string_b) + 1
+
+    # initialze matrices with 0's
+    # first is aligned, second is misaligned with gaps in a, third is misaligned with gaps in b
+    matrix_init = np.zeros(len_a, len_b), np.int)
+    matrix_a_init = np.zeros(len_a, len_b), np.int)
+    matrix_b_init = np.zeros(len_a, len_b), np.int)
+
+    # where there is no sequence to align to set to inf
+    matrix_init.loc[[i for i in range(1,len_a)],0] =  -float("inf")
+    matrix_init.loc[0,[j for j in range(1,len_b)]] =  -float("inf")
+    matrix_a_init.loc[[i for i in range(1,len_a)],0] =  -float("inf")
+    matrix_b_init.loc[0,[j for j in range(1,len_b)]] =  -float("inf")
+
+    # gaps in first seq for every position in second for alignment to zero characters
+    for j in range(1,len_b):
+        matrix_a_init[0,j] = j * extend_gap + open_gap
+    for i in range(1,len_a):
+        matrix_b_init[i,0] = i * extend_gap + open_gap
 
     # for row and column along matrix
     for i, j in itertools.product(range(1, matrix_init.shape[0]), range(1, matrix_init.shape[1])):
 
-        # match is the previous value + the match score if those values are the same in a and b, - other wise
-        match = matrix_init[i - 1, j - 1] + (match_score if string_a[i - 1] == string_b[j - 1] else - match_score)
+        # the max value from the cost matrix given string a position i and string b position j, checking for misalignments along either axis
+        matrix_a_init[i,j] = max(matrix_init[i,j-1]-gap_open-gap_extend,matrix_a_init[i,j-1]-gap_extend,matrix_b_init[i,j-1]-gap_open-gap_extend)
+        matrix_b_init[i,j] = max(matrix_init[i-1,j]-gap_open-gap_extend,matrix_a_init[i-1,j]-gap_open-gap_extend,matrix_b_init[i-1,j]-gap_extend)
+        matrix_init[i,j] = cost_matrix.loc[string_a[i-1],string_b[j-1]]+max(matrix_init[i-1,j-1],matrix_a_init[i-1,j-1],matrix_b_int[i-1,j-1])
 
-        # delete is the same, but misaligned along one axis by the gap score
-        delete = matrix_init[i - 1, j] - gap_cost
+    # get the matrix that has the highest value last element
+    max_matrix_index = values.index(max(matrix_init[-1,-1],matrix_a_init[-1,-1],matrix_b_init[-1,-1]))
+    matrices = [matrix_init,matrix_a_init,matrix_b_init]
+    max_matrix = matrices[max_matrix_index]
 
-        # insert is the same, but misaligned along the other axis by the gap score
-        insert = matrix_init[i, j - 1] - gap_cost
-
-        # the cell becomes the max value of these options
-        matrix_init[i, j] = max(match, delete, insert, 0)
-
-    return matrix_init
+    return max_matrix
 
 def optimal_traceback(score_matrix, string_b, string_b_='',previous_i=0):
     '''
@@ -54,20 +70,57 @@ def optimal_traceback(score_matrix, string_b, string_b_='',previous_i=0):
     # recursivley perform through axis b string
     return optimal_traceback(score_matrix[0:i, 0:j], string_b, string_b_, i)
 
-def smith_waterman(string_a, string_b, match_score=3, gap_cost=2):
+def read_fasta(file):
+    '''
+    read in the fasta sequence and return sequence and protein name
+    '''
+    # get protein name
+    name = re.split('-|.',file)[1]
+
+    # open file and read all lines, remove first for header
+    with open(file,'r') as f:
+        lines = f.read().splitlines()
+        lines = lines[1:]
+
+    # collect sequences
+    sequence = []
+    for line in lines:
+        sequence = sequence + list(line)
+
+    return name, sequence
+
+def smith_waterman(matrix_file,file_a, file_b,open_gap,extend_gap):
     '''
     perform smith waterman algorithm, getting the traceback along the
     matrix of scored values between strings a and b
     '''
 
+    # get the sequence for files a and b
+    string_a,string_b = read_fasta(file_a),read_fasta(file_b)
+
+    # get the rows that start with comment in the cost matrix
+    exclude = [i for i, line in enumerate(open(os.path.join('matrices', matrix_file), "r")) if line.startswith('#')]
+
+    # open matrix file
+    m_file = open(os.path.join('matrices', matrix_file), "r")
+
+    # read in the matrix, skipping the rows that are comments
+    cost_matrix =  pd.read_fwf(m_file,skiprows = exclude[0:])
+
+    # set the index to be the same as the column names
+    cost_matrix.set_index(cost_matrix.columns.values,inplace=True)
+
     # make all the strings upper case letters
     string_a, string_b = string_a.upper(), string_b.upper()
 
     # create the scoring matrix for strings a and b
-    score_matrix = make_scoring_matrix(string_a, string_b, match_score, gap_cost)
+    score_matrix = make_scoring_matrix(cost_matrix,string_a,string_b,open_gap,extend_gap)
 
     # get the optimal trace back through the scoring matrix and find the starting point in the string
-    string_b_, position = optimal_traceback(score_matrix, string_b)
+    # string_b_, position = optimal_traceback(score_matrix, string_b)
 
     # return the starting point in the string, and the length of the matched string b
-    return position, position + len(string_b_)
+    #position, position + len(string_b_)
+
+    # get the score of the matrix
+    return score_matrix[-1,-1]
