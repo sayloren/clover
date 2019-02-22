@@ -20,35 +20,19 @@ def plot_roc_curve(pd_collect):
     '''
     plot receiver operating characteristic (ROC) curve for each matrix
     '''
+    # each positive pair value make 1
+    # each negative pair value make 0
+    # y_true = [1]*len(pos_pairs) + [0]*len(neg_pairs)
+    # make both into list
 
-
-# y_true = [1]*len(pos_pairs) + [0]*len(neg_pairs)
-# fpr = dict()
-# tpr = dict()
-# roc_auc = dict()
-#
-# for path in scoring_files:
-#     fpr[path], tpr[path], _ = roc_curve(y_true, scoring_results[path])
-#     roc_auc[path] = auc(fpr[path], tpr[path])
-#
-#
-# colors = ['deeppink','aqua', 'darkorange', 'cornflowerblue']
-# for path, color in zip(scoring_files, colors):
-#     plt.plot(fpr[path], tpr[path], color=color, lw=2,
-#              label='ROC curve of class {0} (area = {1:0.2f})'
-#              ''.format(path, roc_auc[path]))
-#
-# plt.plot([0, 1], [0, 1], 'k--', lw=2)
-# plt.xlim([0.0, 1.0])
-# plt.ylim([0.0, 1.05])
-# plt.xlabel('False Positive Rate')
-# plt.ylabel('True Positive Rate')
-# plt.title('Receiver operating characteristic to all scoring matrices')
-# plt.legend(loc="lower right")
-# plt.show()
-
-
-
+    # fpr,tpr,threshold = [roc_curve(bin_list,matrix) for x in pd_collect]
+    # area_under_roc_curve = [auc(fpr,tpr) for x in pd_collect]
+    # plt.plot(fpr,tpr,label='matrix, auc = {0}'.format(area_under_roc_curve))
+    # plt.title('ROC curves')
+    # plt.xlim([0.0, 1.0])
+    # plt.ylim([0.0, 1.05])
+    # plt.xlabel('False Positive Rate')
+    # plt.ylabel('True Positive Rate')
 
 def question_one_pt_two(pd_collect,best_gap,best_ext):
     '''
@@ -68,8 +52,21 @@ def question_one_pt_two(pd_collect,best_gap,best_ext):
 
     return best_matrix
 
-def question_one_pt_three():
+def question_one_pt_three(pd_collect):
     '''
     normalize smith and waterman score by length of shortest pair sequence
     roc curves for best matrix and normalized scores
     '''
+    # each positive pair value make 1
+    # each negative pair value make 0
+    # y_true = [1]*len(pos_pairs) + [0]*len(neg_pairs)
+    # make both into list
+
+    # fpr,tpr,threshold = [roc_curve(bin_list,matrix) for x in pd_collect]
+    # area_under_roc_curve = [auc(fpr,tpr) for x in pd_collect]
+    # plt.plot(fpr,tpr,label='matrix, auc = {0}'.format(area_under_roc_curve))
+    # plt.title('ROC curves')
+    # plt.xlim([0.0, 1.0])
+    # plt.ylim([0.0, 1.05])
+    # plt.xlabel('False Positive Rate')
+    # plt.ylabel('True Positive Rate')
