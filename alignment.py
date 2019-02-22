@@ -139,7 +139,8 @@ def smith_waterman(file_a,file_b,matrix_file,open_gap,extend_gap):
     score_matrix = make_scoring_matrix(cost_matrix,string_a,string_b,open_gap,extend_gap)
 
     # get the optimal trace back through the scoring matrix and find the starting point in the string
-    # string_b_, position = optimal_traceback(score_matrix, string_b)
+    string_b_, position = optimal_traceback(score_matrix, string_b)
+    print(string_b_)
 
     # return the starting point in the string, and the length of the matched string b
     #position, position + len(string_b_)
