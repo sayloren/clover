@@ -130,6 +130,9 @@ def smith_waterman(file_a,file_b,matrix_file,open_gap,extend_gap):
     string_a = [x.upper() for x in string_a]
     string_b = [x.upper() for x in string_b]
 
+    # get the length of the smallest string pair
+    min_length = min(len(string_a),len(string_b))
+
     # create the scoring matrix for strings a and b
     score_matrix = make_scoring_matrix(cost_matrix,string_a,string_b,open_gap,extend_gap)
 
@@ -140,4 +143,4 @@ def smith_waterman(file_a,file_b,matrix_file,open_gap,extend_gap):
     #position, position + len(string_b_)
 
     # get the score of the matrix
-    return score_matrix[-1,-1]
+    return score_matrix[-1,-1],min_length

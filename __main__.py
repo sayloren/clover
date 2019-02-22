@@ -1,7 +1,7 @@
 import pandas as pd
 import argparse
 import os
-from alignment import smith_waterman
+from alignment import smith_waterman,read_fasta
 from question import question_one_pt_one,question_one_pt_two
 
 def get_args():
@@ -32,8 +32,8 @@ def main():
                 for gap in range(1,args.gap):
 
                     # 2) get matrix scoring fasta pair for each matrix
-                    pos_scores = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in pos_pairs]
-                    neg_scores = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in neg_pairs]
+                    pos_scores,pos_min = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in pos_pairs]
+                    neg_scores,neg_min = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in neg_pairs]
 
                     # the index of the value from which to subset the sorted true positive list
                     subset_index = int(len(pos_scores)-(len(pos_scores)*args.threshold/100)-1)
@@ -44,10 +44,10 @@ def main():
                     true_pos = sum([x > threshold for x in pos_scores])/len(pos_scores)
 
                     # get the gap, gap extention, false and true positives
-                    out = [true_pos,false_pos,gap,gap_ext,m]
+                    out = [true_pos,false_pos,gap,gap_ext,m,pos_min,neg_min]
                     collect.append(out)
 
-        pd_collect = pd.DataFrame(collect,columns=['true','false','gap','ext','matrix'])
+        pd_collect = pd.DataFrame(collect,columns=['true','false','gap','ext','matrix','t_min','f_min'])
         pd_collect.to_csv('paired_runs.csv',sep='\t')
 
     # get gap/ext values for best false positive rate in BLOSUM50 matrices
