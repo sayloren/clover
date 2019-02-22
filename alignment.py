@@ -1,5 +1,11 @@
 # script with implmenting smith-waterman from
 # https://tiefenauer.github.io/blog/smith-waterman/
+import re
+import os
+import numpy as np
+import pandas as pd
+import math
+import itertools
 
 def make_scoring_matrix(cost_matrix,string_a,string_b,open_gap,extend_gap):
     '''
@@ -8,20 +14,20 @@ def make_scoring_matrix(cost_matrix,string_a,string_b,open_gap,extend_gap):
     '''
 
     # get the lengths of the strings
-    len_a = (len(string_a) + 1
+    len_a = len(string_a) + 1
     len_b = len(string_b) + 1
 
     # initialze matrices with 0's
     # first is aligned, second is misaligned with gaps in a, third is misaligned with gaps in b
-    matrix_init = np.zeros(len_a, len_b), np.int)
-    matrix_a_init = np.zeros(len_a, len_b), np.int)
-    matrix_b_init = np.zeros(len_a, len_b), np.int)
+    matrix_init = np.zeros((len_a, len_b))
+    matrix_a_init = np.zeros((len_a, len_b))
+    matrix_b_init = np.zeros((len_a, len_b))
 
     # where there is no sequence to align to set to inf
-    matrix_init.loc[[i for i in range(1,len_a)],0] =  -float("inf")
-    matrix_init.loc[0,[j for j in range(1,len_b)]] =  -float("inf")
-    matrix_a_init.loc[[i for i in range(1,len_a)],0] =  -float("inf")
-    matrix_b_init.loc[0,[j for j in range(1,len_b)]] =  -float("inf")
+    matrix_init[[i for i in range(1,len_a)],0] = -(math.inf)
+    matrix_init[0,[j for j in range(1,len_b)]] =  -(math.inf)
+    matrix_a_init[[i for i in range(1,len_a)],0] =  -(math.inf)
+    matrix_b_init[0,[j for j in range(1,len_b)]] =  -(math.inf)
 
     # gaps in first seq for every position in second for alignment to zero characters
     for j in range(1,len_b):
@@ -32,13 +38,24 @@ def make_scoring_matrix(cost_matrix,string_a,string_b,open_gap,extend_gap):
     # for row and column along matrix
     for i, j in itertools.product(range(1, matrix_init.shape[0]), range(1, matrix_init.shape[1])):
 
+        # terms
+        comb_gap = open_gap-extend_gap
+        matrix_a_pos = matrix_init[i,j-1]
+        matrix_b_pos = matrix_init[i-1,j]
+        str_a_pos = string_a[i-1]
+        str_b_pos = string_b[j-1]
+        matrix_pre = matrix_init[i-1,j-1]
+        matrix_a_pre = matrix_a_init[i-1,j-1]
+        matrix_b_pre = matrix_b_init[i-1,j-1]
+
         # the max value from the cost matrix given string a position i and string b position j, checking for misalignments along either axis
-        matrix_a_init[i,j] = max(matrix_init[i,j-1]-gap_open-gap_extend,matrix_a_init[i,j-1]-gap_extend,matrix_b_init[i,j-1]-gap_open-gap_extend)
-        matrix_b_init[i,j] = max(matrix_init[i-1,j]-gap_open-gap_extend,matrix_a_init[i-1,j]-gap_open-gap_extend,matrix_b_init[i-1,j]-gap_extend)
-        matrix_init[i,j] = cost_matrix.loc[string_a[i-1],string_b[j-1]]+max(matrix_init[i-1,j-1],matrix_a_init[i-1,j-1],matrix_b_int[i-1,j-1])
+        matrix_a_init[i,j] = max(matrix_a_pos-comb_gap,matrix_a_pos-extend_gap,matrix_a_pos-comb_gap)
+        matrix_b_init[i,j] = max(matrix_b_pos-comb_gap,matrix_b_pos-comb_gap,matrix_b_pos-comb_gap)
+        matrix_init[i,j] = cost_matrix.loc[str_a_pos,str_b_pos]+max(matrix_pre,matrix_a_pre,matrix_b_pre)
 
     # get the matrix that has the highest value last element
-    max_matrix_index = values.index(max(matrix_init[-1,-1],matrix_a_init[-1,-1],matrix_b_init[-1,-1]))
+    max_values = matrix_init[-1,-1],matrix_a_init[-1,-1],matrix_b_init[-1,-1]
+    max_matrix_index = max_values.index(max(max_values))
     matrices = [matrix_init,matrix_a_init,matrix_b_init]
     max_matrix = matrices[max_matrix_index]
 
@@ -87,9 +104,9 @@ def read_fasta(file):
     for line in lines:
         sequence = sequence + list(line)
 
-    return name, sequence
+    return sequence
 
-def smith_waterman(matrix_file,file_a, file_b,open_gap,extend_gap):
+def smith_waterman(file_a,file_b,matrix_file,open_gap,extend_gap):
     '''
     perform smith waterman algorithm, getting the traceback along the
     matrix of scored values between strings a and b
@@ -99,7 +116,7 @@ def smith_waterman(matrix_file,file_a, file_b,open_gap,extend_gap):
     string_a,string_b = read_fasta(file_a),read_fasta(file_b)
 
     # get the rows that start with comment in the cost matrix
-    exclude = [i for i, line in enumerate(open(os.path.join('matrices', matrix_file), "r")) if line.startswith('#')]
+    exclude = [i for i, line in enumerate(open(os.path.join('matrices',matrix_file),"r")) if line.startswith('#')]
 
     # open matrix file
     m_file = open(os.path.join('matrices', matrix_file), "r")
@@ -110,8 +127,9 @@ def smith_waterman(matrix_file,file_a, file_b,open_gap,extend_gap):
     # set the index to be the same as the column names
     cost_matrix.set_index(cost_matrix.columns.values,inplace=True)
 
-    # make all the strings upper case letters
-    string_a, string_b = string_a.upper(), string_b.upper()
+    # make sure strings are upper case
+    string_a = [x.upper() for x in string_a]
+    string_b = [x.upper() for x in string_b]
 
     # create the scoring matrix for strings a and b
     score_matrix = make_scoring_matrix(cost_matrix,string_a,string_b,open_gap,extend_gap)
