@@ -21,10 +21,6 @@ def plot_roc_curve(pd_collect):
     '''
     plot receiver operating characteristic (ROC) curve for each matrix
     '''
-    # each positive pair value make 1
-    # each negative pair value make 0
-    # y_true = [1]*len(pos_pairs) + [0]*len(neg_pairs)
-    # make both into list
 
     # fpr,tpr,threshold = [roc_curve(bin_list,matrix) for x in pd_collect]
     # area_under_roc_curve = [auc(fpr,tpr) for x in pd_collect]

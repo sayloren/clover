@@ -22,10 +22,12 @@ def main():
 
     # initialze the collection data frame
     collect = []
+    collect_scores = []
 
     # if arg given, read in matrix from file
     if args.inmatrix:
-        pd_collect = pd.read_csv('paired_runs.csv',sep='\t')
+        pd_collect = pd.read_csv('rate_run.csv',sep='\t')
+        pd_scores = pd.read_csv('score_run.csv',sep='\t')
     else:
         # iterate through matrices, gap and gap extention sizes
         for m in os.listdir('matrices'):
@@ -41,21 +43,34 @@ def main():
                     # the index of the value from which to subset the sorted true positive list
                     subset_index = int(len(pos_scores)-(len(pos_scores)*args.threshold/100)-1)
                     threshold = sorted(pos_scores)[subset_index]
+                    norm_threshold = sorted(pos_min)[subset_index]
 
                     # 3) get the false and true positive rates
                     false_pos = sum([x > threshold for x in neg_scores])/len(neg_scores)
                     true_pos = sum([x > threshold for x in pos_scores])/len(pos_scores)
 
-                    false_norm = sum(list(compress(neg_min, [x > threshold for x in neg_scores])))/len(neg_scores)
-                    true_norm = sum(list(compress(pos_min, [x > threshold for x in pos_scores])))/len(pos_scores)
+                    false_norm = sum(list(compress(neg_min, [x > norm_threshold for x in neg_min])))/len(neg_min)
+                    true_norm = sum(list(compress(pos_min, [x > norm_threshold for x in pos_min])))/len(pos_min)
 
                     # get the gap, gap extention, false and true positives
                     out = [true_pos,false_pos,gap,gap_ext,m,true_norm,false_norm]
-                    print(out)
                     collect.append(out)
 
+                    # collect the scores and other values for making roc curve
+                    all_score = [pos_scores + neg_scores]
+                    all_norm = [pos_min + neg_min]
+                    all_matrix = [m]*len(pos_scores) + [m]*len(neg_scores)
+                    all_labels = [1]*len(pos_scores) + [0]*len(neg_scores)
+                    all_gaps = [gap]*len(pos_scores) + [gap]*len(neg_scores)
+                    all_ext = [gap_ext]*len(pos_scores) + [gap_ext]*len(neg_scores)
+                    pd_scores = pd.DataFrame({'scores':all_score,'norm_scores':all_norm,'matrix':all_matrix,'labels':all_labels,'gap':all_gaps,'ext':all_ext})
+                    collect_scores.append(pd_scores)
+
         pd_collect = pd.DataFrame(collect,columns=['true','false','gap','ext','matrix','t_min','f_min'])
-        pd_collect.to_csv('paired_runs.csv',sep='\t')
+        pd_collect.to_csv('rate_run.csv',sep='\t',index=False)
+
+        pd_scores = pd.concat(collect_scores,axis=0,columns=['scores','norm_scores','matrix','labels','gap','ext'])
+        pd_scores.to_csv('score_run.csv',sep='\t',index=False)
 
     # get gap/ext values for best false positive rate in BLOSUM50 matrices
     best_gap,best_ext = question_one_pt_one(pd_collect)
