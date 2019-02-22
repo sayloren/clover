@@ -1,6 +1,7 @@
 import pandas as pd
 import argparse
 import os
+from itertools import compress
 from alignment import smith_waterman,read_fasta
 from question import question_one_pt_one,question_one_pt_two
 
@@ -32,8 +33,10 @@ def main():
                 for gap in range(1,args.gap):
 
                     # 2) get matrix scoring fasta pair for each matrix
-                    pos_scores,pos_min = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in pos_pairs]
-                    neg_scores,neg_min = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in neg_pairs]
+                    pos_out = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in pos_pairs]
+                    pos_scores,pos_min = [p[0] for p in pos_out],[p[1] for p in pos_out]
+                    neg_out = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in neg_pairs]
+                    neg_scores,neg_min = [n[0] for n in neg_out],[n[1] for n in neg_out]
 
                     # the index of the value from which to subset the sorted true positive list
                     subset_index = int(len(pos_scores)-(len(pos_scores)*args.threshold/100)-1)
@@ -43,8 +46,12 @@ def main():
                     false_pos = sum([x > threshold for x in neg_scores])/len(neg_scores)
                     true_pos = sum([x > threshold for x in pos_scores])/len(pos_scores)
 
+                    false_norm = sum(list(compress(neg_min, [x > threshold for x in neg_scores])))/len(neg_scores)
+                    true_norm = sum(list(compress(pos_min, [x > threshold for x in pos_scores])))/len(pos_scores)
+
                     # get the gap, gap extention, false and true positives
-                    out = [true_pos,false_pos,gap,gap_ext,m,pos_min,neg_min]
+                    out = [true_pos,false_pos,gap,gap_ext,m,true_norm,false_norm]
+                    print(out)
                     collect.append(out)
 
         pd_collect = pd.DataFrame(collect,columns=['true','false','gap','ext','matrix','t_min','f_min'])

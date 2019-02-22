@@ -143,4 +143,4 @@ def smith_waterman(file_a,file_b,matrix_file,open_gap,extend_gap):
     #position, position + len(string_b_)
 
     # get the score of the matrix
-    return score_matrix[-1,-1],min_length
+    return score_matrix[-1,-1],score_matrix[-1,-1]/min_length
