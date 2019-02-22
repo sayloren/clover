@@ -1,11 +1,10 @@
-# script with implmenting smith-waterman from
-# https://tiefenauer.github.io/blog/smith-waterman/
 import re
 import os
 import numpy as np
 import pandas as pd
 import math
 import itertools
+# https://tiefenauer.github.io/blog/smith-waterman/
 
 def make_scoring_matrix(cost_matrix,string_a,string_b,open_gap,extend_gap):
     '''
