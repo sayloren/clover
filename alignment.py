@@ -4,8 +4,10 @@ import numpy as np
 import pandas as pd
 import math
 import itertools
+import numba as nb
 # https://tiefenauer.github.io/blog/smith-waterman/
 
+# @nb.jit(parallel=True)
 def make_scoring_matrix(cost_matrix,string_a,string_b,open_gap,extend_gap):
     '''
     make a matrix of dimensions string_a x string_b

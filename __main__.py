@@ -1,9 +1,10 @@
 import pandas as pd
 import argparse
 import os
+import numba as nb
 from itertools import compress
 from alignment import smith_waterman,read_fasta
-from question import question_one_pt_one,question_one_pt_two
+from question import question_one_pt_one,question_one_pt_two,question_one_pt_three
 
 def get_args():
     parser = argparse.ArgumentParser(description="Description")
@@ -57,8 +58,8 @@ def main():
                     collect.append(out)
 
                     # collect the scores and other values for making roc curve
-                    all_score = [pos_scores + neg_scores]
-                    all_norm = [pos_min + neg_min]
+                    all_score = pos_scores + neg_scores
+                    all_norm = pos_min + neg_min
                     all_matrix = [m]*len(pos_scores) + [m]*len(neg_scores)
                     all_labels = [1]*len(pos_scores) + [0]*len(neg_scores)
                     all_gaps = [gap]*len(pos_scores) + [gap]*len(neg_scores)
@@ -72,13 +73,18 @@ def main():
         pd_scores = pd.concat(collect_scores,axis=0,columns=['scores','norm_scores','matrix','labels','gap','ext'])
         pd_scores.to_csv('score_run.csv',sep='\t',index=False)
 
+    # question 1.1
     # get gap/ext values for best false positive rate in BLOSUM50 matrices
     best_gap,best_ext = question_one_pt_one(pd_collect)
     print('for BLOSUM50, best gap is {0}, best ext is {1}'.format(best_gap,best_ext))
 
+    # question 1.2
     # gap/ext values from above, which matrix has best score
-    best_matrix = question_one_pt_two(pd_collect,best_gap,best_ext)
+    best_matrix = question_one_pt_two(pd_collect,pd_scores,best_gap,best_ext)
     print('For gap {0} and ext {1} the best performing matrix is {2}'.format(best_gap,best_ext,best_matrix))
+
+    # question 1.3
+    question_one_pt_three(pd_scores,best_matrix)
 
 if __name__ == "__main__":
     main()

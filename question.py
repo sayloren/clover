@@ -17,21 +17,26 @@ def question_one_pt_one(pd_collect):
     best_ext = blosum_fifty['ext'][max_index]
     return best_gap,best_ext
 
-def plot_roc_curve(pd_collect):
+def plot_roc_curve(scores,labels,name,file):
     '''
     plot receiver operating characteristic (ROC) curve for each matrix
     '''
+    fpr,tpr,threshold = roc_curve(labels,scores)
+    area_under_roc_curve = auc(fpr,tpr)
+    plt.plot(fpr,tpr,label='auc = {1}'.format(area_under_roc_curve))
+    plt.title('ROC curves for {0}'.format(name))
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
 
-    # fpr,tpr,threshold = [roc_curve(bin_list,matrix) for x in pd_collect]
-    # area_under_roc_curve = [auc(fpr,tpr) for x in pd_collect]
-    # plt.plot(fpr,tpr,label='matrix, auc = {0}'.format(area_under_roc_curve))
-    # plt.title('ROC curves')
-    # plt.xlim([0.0, 1.0])
-    # plt.ylim([0.0, 1.05])
-    # plt.xlabel('False Positive Rate')
-    # plt.ylabel('True Positive Rate')
+    outdir = pathlib.Path('images')
+    outfile = outdir / 'ROC_{0}.png'.format(file)
+    outdir.mkdir(parents=True, exist_ok=True)
+    plt.savefig(str(outfile),format='png')
+    plt.close()
 
-def question_one_pt_two(pd_collect,best_gap,best_ext):
+def question_one_pt_two(pd_collect,pd_scores,best_gap,best_ext):
     '''
     gap/ext values from question one pt one, which matrix has best false positive score
     '''
@@ -44,14 +49,27 @@ def question_one_pt_two(pd_collect,best_gap,best_ext):
     # get the matrix that from that index, 4 for matrix column
     best_matrix = best_gap_and_ext['matrix'][max_index]
 
-    # plot the roc curves for each matrix
-    plot_roc_curve(pd_collect)
+    # get the best matrix from the scores matrix
+    best_scores = pd_scores.loc[pd_scores['matrix'] == best_matrix]
+
+    # get the scores and labels
+    labels = best_scores['scores']
+    scores = best_scores['labels']
+
+    plot_roc_curve(scores,labels,'best performing matrix, {0}'.format(best_matrix),'Best_'.format(best_matrix))
 
     return best_matrix
 
-def question_one_pt_three(pd_collect):
+def question_one_pt_three(pd_scores,best_matrix):
     '''
     normalize smith and waterman score by length of shortest pair sequence
-    roc curves for best matrix and normalized scores
+    roc curves for best matrix, normalized scores
     '''
-    plot_roc_curve(pd_collect)
+    # get the best matrix from the scores matrix
+    best_scores = pd_scores.loc[pd_scores['matrix'] == best_matrix]
+
+    # get the scores and labels
+    labels = best_scores['norm_scores']
+    scores = best_scores['labels']
+
+    plot_roc_curve(scores,labels,'normalized scores, {0}'.format(best_matrix),'Norm_'.format(best_matrix))
