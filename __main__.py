@@ -59,19 +59,11 @@ def main():
 
     # get gap/ext values for best false positive rate in BLOSUM50 matrices
     best_gap,best_ext = question_one_pt_one(pd_collect)
-    print(best_gap,best_ext)
+    print('for BLOSUM50, best gap is {0}, best ext is {1}'.format(best_gap,best_ext))
 
     # gap/ext values from above, which matrix has best score
     best_matrix = question_one_pt_two(pd_collect,best_gap,best_ext)
-    print(best_matrix)
-
-    # receiver operating characteristic (ROC) curve
-    # false pos on x, true pos on y
-    # limit x,y to 0-1
-    # pd_collect['overall'] = pd_collect['true']+pd_collect['false']
-
-
-
+    print('For gap {0} and ext {1} the best performing matrix is {2}'.format(best_gap,best_ext,best_matrix))
 
 if __name__ == "__main__":
     main()
