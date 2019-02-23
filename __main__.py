@@ -1,7 +1,7 @@
 import pandas as pd
 import argparse
 import os
-import numba as nb
+# import numba as nb
 from itertools import compress
 from alignment import smith_waterman,read_fasta
 from question import question_one_pt_one,question_one_pt_two,question_one_pt_three
@@ -14,6 +14,39 @@ def get_args():
     parser.add_argument("-s","--single",action='store_true',help='if want to run for a single set of gap and ext conditions rather than a range') # 15,3
     parser.add_argument("-i","--inmatrix",action='store_true',help='if data file should be read in, other wise the algorithm is run and the matrix generated')
     return parser.parse_args()
+
+def get_score_dfs(gap_ext,gap,m,pos_pairs,neg_pairs,threshold):
+    # 2) get matrix scoring fasta pair for each matrix
+    pos_out = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in pos_pairs]
+    pos_scores,pos_min = [p[0] for p in pos_out],[p[1] for p in pos_out]
+    neg_out = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in neg_pairs]
+    neg_scores,neg_min = [n[0] for n in neg_out],[n[1] for n in neg_out]
+
+    # the index of the value from which to subset the sorted true positive list
+    subset_index = int(len(pos_scores)-(len(pos_scores)*threshold/100)-1)
+    threshold = sorted(pos_scores)[subset_index]
+    norm_threshold = sorted(pos_min)[subset_index]
+
+    # 3) get the false and true positive rates
+    false_pos = sum([x > threshold for x in neg_scores])/len(neg_scores)
+    true_pos = sum([x > threshold for x in pos_scores])/len(pos_scores)
+
+    false_norm = sum(list(compress(neg_min, [x > norm_threshold for x in neg_min])))/len(neg_min)
+    true_norm = sum(list(compress(pos_min, [x > norm_threshold for x in pos_min])))/len(pos_min)
+
+    # get the gap, gap extention, false and true positives
+    out = [true_pos,false_pos,gap,gap_ext,m,true_norm,false_norm]
+
+    # collect the scores and other values for making roc curve
+    all_score = pos_scores + neg_scores
+    all_norm = pos_min + neg_min
+    all_matrix = [m]*len(pos_scores) + [m]*len(neg_scores)
+    all_labels = [1]*len(pos_scores) + [0]*len(neg_scores)
+    all_gaps = [gap]*len(pos_scores) + [gap]*len(neg_scores)
+    all_ext = [gap_ext]*len(pos_scores) + [gap_ext]*len(neg_scores)
+    pd_scores = pd.DataFrame({'scores':all_score,'norm_scores':all_norm,'matrix':all_matrix,'labels':all_labels,'gap':all_gaps,'ext':all_ext})
+
+    return out,pd_scores
 
 def main():
     args = get_args()
@@ -36,81 +69,23 @@ def main():
 
             # if just want to run for a single gap and extention value
             if args.single:
-                gap_ext,gap = args.gapext,args.gap
-
-                # 2) get matrix scoring fasta pair for each matrix
-                pos_out = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in pos_pairs]
-                pos_scores,pos_min = [p[0] for p in pos_out],[p[1] for p in pos_out]
-                neg_out = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in neg_pairs]
-                neg_scores,neg_min = [n[0] for n in neg_out],[n[1] for n in neg_out]
-
-                # the index of the value from which to subset the sorted true positive list
-                subset_index = int(len(pos_scores)-(len(pos_scores)*args.threshold/100)-1)
-                threshold = sorted(pos_scores)[subset_index]
-                norm_threshold = sorted(pos_min)[subset_index]
-
-                # 3) get the false and true positive rates
-                false_pos = sum([x > threshold for x in neg_scores])/len(neg_scores)
-                true_pos = sum([x > threshold for x in pos_scores])/len(pos_scores)
-
-                false_norm = sum(list(compress(neg_min, [x > norm_threshold for x in neg_min])))/len(neg_min)
-                true_norm = sum(list(compress(pos_min, [x > norm_threshold for x in pos_min])))/len(pos_min)
-
-                # get the gap, gap extention, false and true positives
-                out = [true_pos,false_pos,gap,gap_ext,m,true_norm,false_norm]
+                out,pd_scores = get_score_dfs(args.gapext,args.gap,m,pos_pairs,neg_pairs,args.threshold)
                 collect.append(out)
-
-                # collect the scores and other values for making roc curve
-                all_score = pos_scores + neg_scores
-                all_norm = pos_min + neg_min
-                all_matrix = [m]*len(pos_scores) + [m]*len(neg_scores)
-                all_labels = [1]*len(pos_scores) + [0]*len(neg_scores)
-                all_gaps = [gap]*len(pos_scores) + [gap]*len(neg_scores)
-                all_ext = [gap_ext]*len(pos_scores) + [gap_ext]*len(neg_scores)
-                pd_scores = pd.DataFrame({'scores':all_score,'norm_scores':all_norm,'matrix':all_matrix,'labels':all_labels,'gap':all_gaps,'ext':all_ext})
                 collect_scores.append(pd_scores)
 
             # if just want to run for a range of gap and extention values
             else:
                 for gap_ext in range(1,args.gapext):
                     for gap in range(1,args.gap):
-                        # 2) get matrix scoring fasta pair for each matrix
-                        pos_out = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in pos_pairs]
-                        pos_scores,pos_min = [p[0] for p in pos_out],[p[1] for p in pos_out]
-                        neg_out = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in neg_pairs]
-                        neg_scores,neg_min = [n[0] for n in neg_out],[n[1] for n in neg_out]
-
-                        # the index of the value from which to subset the sorted true positive list
-                        subset_index = int(len(pos_scores)-(len(pos_scores)*args.threshold/100)-1)
-                        threshold = sorted(pos_scores)[subset_index]
-                        norm_threshold = sorted(pos_min)[subset_index]
-
-                        # 3) get the false and true positive rates
-                        false_pos = sum([x > threshold for x in neg_scores])/len(neg_scores)
-                        true_pos = sum([x > threshold for x in pos_scores])/len(pos_scores)
-
-                        false_norm = sum(list(compress(neg_min, [x > norm_threshold for x in neg_min])))/len(neg_min)
-                        true_norm = sum(list(compress(pos_min, [x > norm_threshold for x in pos_min])))/len(pos_min)
-
-                        # get the gap, gap extention, false and true positives
-                        out = [true_pos,false_pos,gap,gap_ext,m,true_norm,false_norm]
+                        out,pd_scores = get_score_dfs(gap_ext,gap,m,pos_pairs,neg_pairs,args.threshold)
                         collect.append(out)
-
-                        # collect the scores and other values for making roc curve
-                        all_score = pos_scores + neg_scores
-                        all_norm = pos_min + neg_min
-                        all_matrix = [m]*len(pos_scores) + [m]*len(neg_scores)
-                        all_labels = [1]*len(pos_scores) + [0]*len(neg_scores)
-                        all_gaps = [gap]*len(pos_scores) + [gap]*len(neg_scores)
-                        all_ext = [gap_ext]*len(pos_scores) + [gap_ext]*len(neg_scores)
-                        pd_scores = pd.DataFrame({'scores':all_score,'norm_scores':all_norm,'matrix':all_matrix,'labels':all_labels,'gap':all_gaps,'ext':all_ext})
                         collect_scores.append(pd_scores)
 
-                pd_collect = pd.DataFrame(collect,columns=['true','false','gap','ext','matrix','t_min','f_min'])
-                pd_collect.to_csv('rate_run.csv',sep='\t',index=False)
+        pd_collect = pd.DataFrame(collect,columns=['true','false','gap','ext','matrix','t_min','f_min'])
+        pd_collect.to_csv('rate_run.csv',sep='\t',index=False)
 
-                pd_scores = pd.concat(collect_scores,axis=0,columns=['scores','norm_scores','matrix','labels','gap','ext'])
-                pd_scores.to_csv('score_run.csv',sep='\t',index=False)
+        pd_scores = pd.concat(collect_scores,axis=0)
+        pd_scores.to_csv('score_run.csv',sep='\t',index=False)
 
     # question 1.1
     # get gap/ext values for best false positive rate in BLOSUM50 matrices

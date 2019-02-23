@@ -1,5 +1,8 @@
 import pandas as pd
 from sklearn.metrics import roc_curve, auc
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pathlib
 
 def question_one_pt_one(pd_collect):
     '''
@@ -17,19 +20,32 @@ def question_one_pt_one(pd_collect):
     best_ext = blosum_fifty['ext'][max_index]
     return best_gap,best_ext
 
-def plot_roc_curve(scores,labels,name,file):
+def plot_roc_curve(pd_df,scores,labels,name,file):
     '''
     plot receiver operating characteristic (ROC) curve for each matrix
+    alternatively try https://stackoverflow.com/questions/25009284/how-to-plot-roc-curve-in-python
     '''
-    fpr,tpr,threshold = roc_curve(labels,scores)
-    area_under_roc_curve = auc(fpr,tpr)
-    plt.plot(fpr,tpr,label='auc = {1}'.format(area_under_roc_curve))
+    sns.set_style('ticks')
+    sns.set_palette("husl")
+
+    # get the matrices
+    matrix_names = pd_df['matrix'].tolist()
+    unique_names = set(matrix_names)
+
+    # for each matrix plot roc
+    for m in unique_names:
+        df = pd_df.loc[pd_df['matrix'] == m]
+        fpr,tpr,threshold = roc_curve(df[labels],df[scores])
+        area_under_roc_curve = auc(fpr,tpr)
+        sns.lineplot(fpr,tpr,label='{0}, AUC={0}'.format(m,round(area_under_roc_curve,3)))
     plt.title('ROC curves for {0}'.format(name))
     plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
+    plt.ylim([0.0, 1.0])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
+    plt.legend()
 
+    # save plot to image directory
     outdir = pathlib.Path('images')
     outfile = outdir / 'ROC_{0}.png'.format(file)
     outdir.mkdir(parents=True, exist_ok=True)
@@ -49,14 +65,7 @@ def question_one_pt_two(pd_collect,pd_scores,best_gap,best_ext):
     # get the matrix that from that index, 4 for matrix column
     best_matrix = best_gap_and_ext['matrix'][max_index]
 
-    # get the best matrix from the scores matrix
-    best_scores = pd_scores.loc[pd_scores['matrix'] == best_matrix]
-
-    # get the scores and labels
-    labels = best_scores['scores']
-    scores = best_scores['labels']
-
-    plot_roc_curve(scores,labels,'best performing matrix, {0}'.format(best_matrix),'Best_'.format(best_matrix))
+    plot_roc_curve(pd_scores,'scores','labels','best performing matrix, {0}'.format(best_matrix),'Best_'.format(best_matrix))
 
     return best_matrix
 
@@ -65,11 +74,5 @@ def question_one_pt_three(pd_scores,best_matrix):
     normalize smith and waterman score by length of shortest pair sequence
     roc curves for best matrix, normalized scores
     '''
-    # get the best matrix from the scores matrix
-    best_scores = pd_scores.loc[pd_scores['matrix'] == best_matrix]
 
-    # get the scores and labels
-    labels = best_scores['norm_scores']
-    scores = best_scores['labels']
-
-    plot_roc_curve(scores,labels,'normalized scores, {0}'.format(best_matrix),'Norm_'.format(best_matrix))
+    plot_roc_curve(pd_scores,'norm_scores','labels','normalized scores, {0}'.format(best_matrix),'Norm_'.format(best_matrix))
