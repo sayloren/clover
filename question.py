@@ -22,6 +22,7 @@ def question_one_pt_one(pd_collect):
 
 def plot_roc_curve(pd_df,scores,labels,name,file):
     '''
+    info about understangin roc http://gim.unmc.edu/dxtests/roc3.htm
     plot receiver operating characteristic (ROC) curve for each matrix
     alternatively try https://stackoverflow.com/questions/25009284/how-to-plot-roc-curve-in-python
     '''
