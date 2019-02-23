@@ -36,4 +36,4 @@ python -m pytest
 ![a](/images/ROC_Norm_.png)  
 
 ##### Example of heatmap for score matrix between two sequences  
-![a](/Heatmap_prot-0004_prot-0008.png)  
+![a](/images/Heatmap_prot-0004_prot-0008.png)  
