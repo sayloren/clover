@@ -1,7 +1,6 @@
 import pandas as pd
 import argparse
 import os
-# import numba as nb
 from itertools import compress
 from alignment import smith_waterman,read_fasta
 from question import question_one_pt_one,question_one_pt_two,question_one_pt_three

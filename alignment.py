@@ -7,10 +7,8 @@ import itertools
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pathlib
-# import numba as nb
 # https://tiefenauer.github.io/blog/smith-waterman/
 
-# @nb.jit(parallel=True)
 def make_scoring_matrix(cost,str_a,str_b,open,extend):
     '''
     make a matrix of dimensions string_a x string_b
@@ -81,6 +79,8 @@ def optimal_traceback(score_matrix, string_b, string_b_='',previous_i=0):
     recurisively for each substring in string b
     find the optimal traceback path within the scoring matrix
     get each last max occurance starting from the bottom of the scoring matrix
+
+    doesn't yet account for direction of receipt!!
     '''
     # invert the matrix in order to get the last value from both axes
     score_matrix_flip = np.flip(np.flip(score_matrix, 0), 1)
@@ -95,11 +95,10 @@ def optimal_traceback(score_matrix, string_b, string_b_='',previous_i=0):
     if score_matrix[i, j] == 0:
         return string_b_, j
 
+    print(string_b_,previous_i,i,j)
+
     # other wise add to the string value or add gap string
     string_b_ = string_b[j - 1] + '-' + string_b_ if previous_i - i > 1 else string_b[j - 1] + string_b_
-    # print(string_b, string_b_,previous_i)
-    # print(i_, j_)
-    # print(i,j)
 
     # recursivley perform through axis b string
     return optimal_traceback(score_matrix[0:i, 0:j], string_b, string_b_, i)
@@ -173,13 +172,14 @@ def smith_waterman(file_a,file_b,matrix_file,open_gap,extend_gap):
     # create the scoring matrix for strings a and b
     score_matrix,source_matrix = make_scoring_matrix(cost_matrix,string_a,string_b,open_gap,extend_gap)
 
-    scoring_matrix_heatmap(score_matrix,string_a,string_b,name_a,name_b)
+    # scoring_matrix_heatmap(score_matrix,string_a,string_b,name_a,name_b)
 
     # get the optimal trace back through the scoring matrix and find the starting point in the string
-    # string_b_, position = optimal_traceback(score_matrix, string_b)
+    # alignment, start = optimal_traceback(score_matrix, string_b)
+    # print(alignment)
 
     # return the starting point in the string, and the length of the matched string b
-    #position, position + len(string_b_)
+    #start, start + len(alignment)
 
     # get the score of the matrix
     return score_matrix[-1,-1],score_matrix[-1,-1]/min_length
