@@ -77,3 +77,8 @@ def question_one_pt_three(pd_scores,best_matrix):
     '''
 
     plot_roc_curve(pd_scores,'norm_scores','labels','normalized scores, {0}'.format(best_matrix),'Norm_'.format(best_matrix))
+
+def question_two_pt_one(pd_scores,m):
+    '''
+    modify starting score matrix
+    '''
