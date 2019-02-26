@@ -21,7 +21,7 @@ def run_sw_and_split_out(pairs,m,gap,gap_ext):
     two outputs
     '''
     out = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in pairs]
-    return [x[0] for x in out],[x[1] for x in out]
+    return [x[0] for x in out],[x[1] for x in out],[x[2] for x in out]
 
 def get_rates(threshold,scores):
     '''
@@ -41,24 +41,23 @@ def make_columns(value_a,value_b,length_a,length_b):
     '''
     return [value_a]*len(length_a) + [value_b]*len(length_b)
 
-
 def get_score_dfs(gap_ext,gap,m,pos_pairs,neg_pairs,threshold):
     '''
     make a df from the scoring matrices
     '''
-    pos_scores,pos_min = run_sw_and_split_out(pos_pairs,m,gap,gap_ext)
-    neg_scores,neg_min = run_sw_and_split_out(neg_pairs,m,gap,gap_ext)
+    pos_scores,pos_min,pos_align = run_sw_and_split_out(pos_pairs,m,gap,gap_ext)
+    neg_scores,neg_min,neg_align = run_sw_and_split_out(neg_pairs,m,gap,gap_ext)
 
     # the index of the value from which to subset the sorted true positive list
     subset_index = int(len(pos_scores)-(len(pos_scores)*threshold/100)-1)
-    threshold = sorted(pos_scores)[subset_index]
-    norm_threshold = sorted(pos_min)[subset_index]
 
     # 3) get the false and true positive rates
+    threshold = sorted(pos_scores)[subset_index]
     false_pos = get_rates(threshold,neg_scores)
-    true_pos - get_rates(threshold,pos_scores)
+    true_pos = get_rates(threshold,pos_scores)
 
     # get the normalized false and true positive rates
+    norm_threshold = sorted(pos_min)[subset_index]
     false_norm = get_norm_rates(norm_threshold,neg_min)
     true_norm = get_norm_rates(norm_threshold,pos_min)
 
@@ -72,8 +71,9 @@ def get_score_dfs(gap_ext,gap,m,pos_pairs,neg_pairs,threshold):
     all_labels = make_columns(1,0,pos_scores,neg_scores)
     all_gaps = make_columns(gap,gap,pos_scores,neg_scores)
     all_ext = make_columns(gap_ext,gap_ext,pos_scores,neg_scores)
+    all_align = make_columns(pos_align,neg_align,pos_scores,neg_scores)
     pd_scores = pd.DataFrame({'scores':all_score,'norm_scores':all_norm,
-        'matrix':all_matrix,'labels':all_labels,'gap':all_gaps,'ext':all_ext})
+        'matrix':all_matrix,'labels':all_labels,'gap':all_gaps,'ext':all_ext,'alignment':all_align})
 
     return out,pd_scores
 

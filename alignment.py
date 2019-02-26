@@ -122,7 +122,8 @@ def scoring_matrix_heatmap(matrix,str_a,str_b,name_a,name_b,start_position,align
     sns.heatmap(matrix,xticklabels=False,yticklabels=False,vmin=0)
     plt.xlabel('String A, {0}'.format(name_a))
     plt.ylabel('String B, {0}'.format(name_b))
-    plt.title('{0}x{1}, starting:{2}, score:{3}, {4}'.format(name_a,name_b,start_position,score,align))
+    plt.title('{0}x{1}, starting:{2}, score:{3}'.format(name_a,name_b,start_position,score))
+    plt.suptitle('{0}'.format(align))
 
     # save plot to image directory
     outdir = pathlib.Path('images')
@@ -192,13 +193,9 @@ def smith_waterman(file_a,file_b,matrix_file,open_gap,extend_gap):
     score_matrix,source_matrix,start_position = make_scoring_matrix(cost_matrix,string_a,string_b,open_gap,extend_gap)
 
     # get the optimal trace back through the scoring matrix and find the starting point in the string
-    # alignment =  optimal_traceback(source_matrix,start_position,string_b)
     alignment, start = optimal_traceback(score_matrix, string_a)
-    # print(''.join(string_a))
-    # print(''.join(string_b))
-    # print(alignment)
 
     scoring_matrix_heatmap(score_matrix,string_a,string_b,name_a,name_b,start_position,alignment,score_matrix[start_position])
 
     # get the score of the matrix
-    return score_matrix[start_position],score_matrix[start_position]/min_length
+    return score_matrix[start_position],score_matrix[start_position]/min_length,alignment
