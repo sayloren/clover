@@ -2,12 +2,79 @@ import re
 import os
 import numpy as np
 import pandas as pd
+from itertools import compress
 import math
 import itertools
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pathlib
 # https://tiefenauer.github.io/blog/smith-waterman/
+
+def threshold_and_get_rates(positives,negatives,subset_index):
+    '''
+    get the threshold and those that are then indicated as true and false positives
+    '''
+
+    threshold = sorted(positives)[subset_index]
+    false_pos = get_rates(threshold,negatives)
+    true_pos = get_rates(threshold,positives)
+    return false_pos,true_pos
+
+def get_score_dfs(gap_ext,gap,m,pos_pairs,neg_pairs,threshold):
+    '''
+    make a df from the scoring matrices
+    '''
+    pos_scores,pos_min,pos_align = run_sw_and_split_out(pos_pairs,m,gap,gap_ext)
+    neg_scores,neg_min,neg_align = run_sw_and_split_out(neg_pairs,m,gap,gap_ext)
+
+    # the index of the value from which to subset the sorted true positive list
+    subset_index = int(len(pos_scores)-(len(pos_scores)*threshold/100)-1)
+
+    # get the false and true positive rates, and normalized
+    false_pos,true_pos = threshold_and_get_rates(pos_scores,neg_scores,subset_index)
+    false_norm,true_norm = threshold_and_get_rates(pos_min,neg_min,subset_index)
+
+    # get the gap, gap extention, false and true positives
+    pd_stats = [true_pos,false_pos,gap,gap_ext,m,true_norm,false_norm]
+
+    # collect the scores and other values for making roc curve
+    all_score = pos_scores + neg_scores
+    all_norm = pos_min + neg_min
+    all_matrix = make_columns(m,m,pos_scores,neg_scores)
+    all_labels = make_columns(1,0,pos_scores,neg_scores)
+    all_gaps = make_columns(gap,gap,pos_scores,neg_scores)
+    all_ext = make_columns(gap_ext,gap_ext,pos_scores,neg_scores)
+    all_align = make_columns(pos_align,neg_align,pos_scores,neg_scores)
+    pd_scores = pd.DataFrame({'scores':all_score,'norm_scores':all_norm,
+        'matrix':all_matrix,'labels':all_labels,'gap':all_gaps,'ext':all_ext})#,'alignment':all_align
+
+    return pd_stats,pd_scores
+
+def run_sw_and_split_out(pairs,m,gap,gap_ext):
+    '''
+    run the smith waterman alg and split the scoring and source matrices into
+    two outputs
+    '''
+    out = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in pairs]
+    return [x[0] for x in out],[x[1] for x in out],[x[2] for x in out]
+
+def get_rates(threshold,scores):
+    '''
+    get the false and true positive rates
+    '''
+    return sum([x > threshold for x in scores])/len(scores)
+
+def get_norm_rates(threshold,min):
+    '''
+    get the normalized false and true positive rates
+    '''
+    return sum(list(compress(min, [x > threshold for x in min])))/len(min)
+
+def make_columns(value_a,value_b,length_a,length_b):
+    '''
+    make columns for output data frame
+    '''
+    return [value_a]*len(length_a) + [value_b]*len(length_b)
 
 def make_empty_matrices(length,width):
     '''
@@ -122,7 +189,7 @@ def scoring_matrix_heatmap(matrix,str_a,str_b,name_a,name_b,start_position,align
     sns.heatmap(matrix,xticklabels=False,yticklabels=False,vmin=0)
     plt.xlabel('String A, {0}'.format(name_a))
     plt.ylabel('String B, {0}'.format(name_b))
-    plt.title('{0}x{1}, starting:{2}, score:{3}'.format(name_a,name_b,start_position,score))
+    plt.title('Starting:{0}, score:{1}'.format(start_position,score))
     plt.suptitle('{0}'.format(align))
 
     # save plot to image directory
@@ -160,16 +227,10 @@ def optimal_traceback(score_matrix, string_a, string_a_='',previous_i=0):
     # recursivley perform through axis b string
     return optimal_traceback(score_matrix[0:i, 0:j], string_a, string_a_, i)
 
-def smith_waterman(file_a,file_b,matrix_file,open_gap,extend_gap):
+def read_in_cost_matrix(matrix_file):
     '''
-    perform smith waterman algorithm, getting the traceback along the
-    matrix of scored values between strings a and b
+    read in the costmatrix
     '''
-
-    # get the sequence for files a and b
-    string_a, name_a = read_fasta(file_a)
-    string_b, name_b = read_fasta(file_b)
-
     # get the rows that start with comment in the cost matrix
     exclude = [i for i, line in enumerate(open(os.path.join('matrices',matrix_file),"r")) if line.startswith('#')]
 
@@ -181,6 +242,20 @@ def smith_waterman(file_a,file_b,matrix_file,open_gap,extend_gap):
 
     # set the index to be the same as the column names
     cost_matrix.set_index(cost_matrix.columns.values,inplace=True)
+    return cost_matrix
+
+def smith_waterman(file_a,file_b,matrix_file,open_gap,extend_gap):
+    '''
+    perform smith waterman algorithm, getting the traceback along the
+    matrix of scored values between strings a and b
+    '''
+
+    # get the sequence for files a and b
+    string_a, name_a = read_fasta(file_a)
+    string_b, name_b = read_fasta(file_b)
+
+    # read in cost matrix
+    cost_matrix = read_in_cost_matrix(matrix_file)
 
     # make sure strings are upper case
     string_a = [x.upper() for x in string_a]
@@ -194,6 +269,7 @@ def smith_waterman(file_a,file_b,matrix_file,open_gap,extend_gap):
 
     # get the optimal trace back through the scoring matrix and find the starting point in the string
     alignment, start = optimal_traceback(score_matrix, string_a)
+    # print(alignment)
 
     scoring_matrix_heatmap(score_matrix,string_a,string_b,name_a,name_b,start_position,alignment,score_matrix[start_position])
 

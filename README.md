@@ -30,13 +30,13 @@ python -m pytest
 ```
 
 ##### The ROC for the best performing matrix  
-![a](/images/ROC_Best_.png)  
+![a](/images/PAM250_8_3/ROC_Best_.png)  
 
 ##### The ROC normed for the best performing matrix  
-![a](/images/ROC_Norm_.png)  
+![a](/images/PAM250_8_3/ROC_Norm_.png)  
 
 ##### Example of heatmap for score matrix between two sequences  
-![a](/images/Heatmap_prot-0004_prot-0008.png)  
+![a](/images/PAM250_8_3/Heatmap_prot-0004_prot-0008.png)  
 
 ##### Partially worked alignment from the same pairs
 
@@ -50,7 +50,7 @@ ANKTRELCMKSLEHAKVDTSNEARQDGIDLYKHMFENYPPLRKYFKSREEYTAEDVQNDP
 FFAKQGQKILLACHVLCATYDDRETFNAYTRELLDRHARDHVHMPPEVWTDFWKLFEEYL
 GKKTTLDEPTKQAWHEIGREFAKEINK  
 
-T-EL-H-AKVD-LY-HMFEN-P-Y-PFF-EE-RE
+SLE-AQ-S-WAKA-FM-LFDAH-V-F-PEM-FM-IE
 
 ##### Paired alignment from EMBOSS  
-![a](/images/0004_0008_EMBOSS.png)  
+![a](/images/PAM250_8_3/0004_0008_EMBOSS.png)  
