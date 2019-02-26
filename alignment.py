@@ -95,35 +95,6 @@ def make_scoring_matrix(cost,str_a,str_b,open,extend):
     # return only the last instance of the max value in the scoring matrix
     return score_matrix,source_matrix,pair_coords[-1]
 
-def optimal_traceback(score_matrix, string_b, string_b_='',previous_i=0):
-    '''
-    recurisively for each substring in string b
-    find the optimal traceback path within the scoring matrix
-    get each last max occurance starting from the bottom of the scoring matrix
-
-    doesn't yet account for direction of receipt!!
-    '''
-    # invert the matrix in order to get the last value from both axes
-    score_matrix_flip = np.flip(np.flip(score_matrix, 0), 1)
-
-    # get the index of the max value in the score matrix
-    i_, j_ = np.unravel_index(score_matrix_flip.argmax(), score_matrix_flip.shape)
-
-    # adjust the index values
-    i, j = np.subtract(score_matrix.shape, (i_ + 1, j_ + 1))
-
-    # if 0 it means you've gone through the entire matrix
-    if score_matrix[i, j] == 0:
-        return string_b_, j
-
-    print(string_b_,previous_i,i,j)
-
-    # other wise add to the string value or add gap string
-    string_b_ = string_b[j - 1] + '-' + string_b_ if previous_i - i > 1 else string_b[j - 1] + string_b_
-
-    # recursivley perform through axis b string
-    return optimal_traceback(score_matrix[0:i, 0:j], string_b, string_b_, i)
-
 def read_fasta(file):
     '''
     read in the fasta sequence and return sequence and protein name
@@ -144,14 +115,14 @@ def read_fasta(file):
 
     return sequence, name_b
 
-def scoring_matrix_heatmap(matrix,str_a,str_b,name_a,name_b):
+def scoring_matrix_heatmap(matrix,str_a,str_b,name_a,name_b,start_position,align,score):
     '''
     take the scoring matrix and make heatmap
     '''
     sns.heatmap(matrix,xticklabels=False,yticklabels=False,vmin=0)
     plt.xlabel('String A, {0}'.format(name_a))
     plt.ylabel('String B, {0}'.format(name_b))
-    # plt.title('Heatmap for {0} and {1}'.format(name_a,name_b))
+    plt.title('{0}x{1}, starting:{2}, score:{3}, {4}'.format(name_a,name_b,start_position,score,align))
 
     # save plot to image directory
     outdir = pathlib.Path('images')
@@ -160,6 +131,33 @@ def scoring_matrix_heatmap(matrix,str_a,str_b,name_a,name_b):
     plt.savefig(str(outfile),format='png')
     plt.clf()
     plt.close()
+
+def optimal_traceback(score_matrix, string_a, string_a_='',previous_i=0):
+    '''
+    recurisively for each substring in string a
+    find the optimal traceback path within the scoring matrix
+    get each last max occurance starting from the bottom of the scoring matrix
+
+    doesn't yet account for direction recieved!!
+    '''
+    # invert the matrix in order to get the last value from both axes
+    score_matrix_flip = np.flip(np.flip(score_matrix, 0), 1)
+
+    # get the index of the max value in the score matrix
+    i_, j_ = np.unravel_index(score_matrix_flip.argmax(), score_matrix_flip.shape)
+
+    # adjust the index values
+    i, j = np.subtract(score_matrix.shape, (i_ + 1, j_ + 1))
+
+    # if 0 it means you've gone through the entire matrix
+    if score_matrix[i, j] == 0:
+        return string_a_, j
+
+    # other wise add to the string value or add gap string
+    string_a_ = string_a[j - 1] + '-' + string_a_ if previous_i - i > 1 else string_a[j - 1] + string_a_
+
+    # recursivley perform through axis b string
+    return optimal_traceback(score_matrix[0:i, 0:j], string_a, string_a_, i)
 
 def smith_waterman(file_a,file_b,matrix_file,open_gap,extend_gap):
     '''
@@ -191,16 +189,16 @@ def smith_waterman(file_a,file_b,matrix_file,open_gap,extend_gap):
     min_length = min(len(string_a),len(string_b))
 
     # create the scoring matrix for strings a and b
-    score_matrix,source_matrix = make_scoring_matrix(cost_matrix,string_a,string_b,open_gap,extend_gap)
-
-    # scoring_matrix_heatmap(score_matrix,string_a,string_b,name_a,name_b)
+    score_matrix,source_matrix,start_position = make_scoring_matrix(cost_matrix,string_a,string_b,open_gap,extend_gap)
 
     # get the optimal trace back through the scoring matrix and find the starting point in the string
-    # alignment, start = optimal_traceback(score_matrix, string_b)
+    # alignment =  optimal_traceback(source_matrix,start_position,string_b)
+    alignment, start = optimal_traceback(score_matrix, string_a)
+    # print(''.join(string_a))
+    # print(''.join(string_b))
     # print(alignment)
 
-    # return the starting point in the string, and the length of the matched string b
-    #start, start + len(alignment)
+    scoring_matrix_heatmap(score_matrix,string_a,string_b,name_a,name_b,start_position,alignment,score_matrix[start_position])
 
     # get the score of the matrix
-    return score_matrix[-1,-1],score_matrix[-1,-1]/min_length
+    return score_matrix[start_position],score_matrix[start_position]/min_length
