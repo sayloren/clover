@@ -9,6 +9,24 @@ import seaborn as sns
 import pathlib
 # https://tiefenauer.github.io/blog/smith-waterman/
 
+def make_empty_matrices(length,width):
+    '''
+    make empty matrices populated with zeros
+    '''
+    return np.zeros((length,width))
+
+def get_max(list):
+    '''
+    a list from which to get the max value
+    '''
+    return np.max(np.array(list))
+
+def get_max_index(list):
+    '''
+    get the index of the max value in list
+    '''
+    return list.index(get_max(list))
+
 def make_scoring_matrix(cost,str_a,str_b,open,extend):
     '''
     make a matrix of dimensions string_a x string_b
@@ -20,15 +38,11 @@ def make_scoring_matrix(cost,str_a,str_b,open,extend):
 
     # initialze matrices with 0's
     # first is aligned, second is misaligned with gaps in a, third is misaligned with gaps in b
-    M = np.zeros((len_b, len_a))
-    A = np.zeros((len_b, len_a))
-    B = np.zeros((len_b, len_a))
+    M,A,B = make_empty_matrices(len_b, len_a),make_empty_matrices(len_b, len_a),make_empty_matrices(len_b, len_a)
 
     # initalize matrices for the sequence of commands
     # that indicate where each position came from
-    M_c = np.zeros((len_b, len_a))
-    A_c = np.zeros((len_b, len_a))
-    B_c = np.zeros((len_b, len_a))
+    M_c,A_c,B_c = make_empty_matrices(len_b, len_a),make_empty_matrices(len_b, len_a),make_empty_matrices(len_b, len_a)
 
     # # where there is no sequence to align to set to inf
     M[[i for i in range(1,len_b)],0] = -(math.inf)
@@ -51,28 +65,35 @@ def make_scoring_matrix(cost,str_a,str_b,open,extend):
         get_m = [M[i-1,j-1],A[i-1,j-1],B[i-1,j-1]]
         get_a = [M[i-1,j],A[i-1,j]-extend,B[i-1,j]]
         get_b = [M[i,j-1],A[i,j-1],B[i,j-1]-extend]
-        a_max = np.max(np.array(get_a))
-        b_max = np.max(np.array(get_b))
-        m_max = np.max(np.array(get_m))
+        a_max = get_max(get_a)
+        b_max = get_max(get_b)
+        m_max = get_max(get_m)
         A[i,j] = (0 if a_max < 0 else a_max) - open
         B[i,j] = (0 if b_max < 0 else b_max) - open
         M[i,j] = cost.loc[str_a[j-1],str_b[i-1]] + (0 if m_max < 0 else m_max)
 
         # get the index of the max value for each movement in the matrices
         # if the index is: 0 - source M, 1 - source A, 2 - source B
-        A_c = get_a.index(np.max(np.array(get_a)))
-        B_c = get_b.index(np.max(np.array(get_b)))
-        M_c = get_m.index(np.max(np.array(get_m)))
+        A_c[i,j] = get_max_index(get_a)
+        B_c[i,j] = get_max_index(get_b)
+        M_c[i,j] = get_max_index(get_m)
 
-    # get the matrix that has the highest value last element
-    max_values = [M[-1,-1],A[-1,-1],B[-1,-1]]
-    max_index = max_values.index(np.max(np.array(max_values)))
-    matrices = [M,A,B]
+    # get the matrix that has the highest value
+    max_values = [M.max(),A.max(),B.max()]
+    # get the index of the list housing the max elements from the matrices
+    max_index = get_max_index(max_values)
+    score_matrices = [M,A,B]
     source_matrices = [M_c,A_c,B_c]
-    max = matrices[max_index]
-    source = source_matrices[max_index]
+    # get the score and source matrices associated that gives where that value came from
+    score_matrix = score_matrices[max_index]
+    source_matrix = source_matrices[max_index]
 
-    return max,source
+    # get the index of the max value in the score matrix
+    max_instances = np.where(score_matrix == np.amax(score_matrix))
+    pair_coords = list(zip(max_instances[0], max_instances[1]))
+
+    # return only the last instance of the max value in the scoring matrix
+    return score_matrix,source_matrix,pair_coords[-1]
 
 def optimal_traceback(score_matrix, string_b, string_b_='',previous_i=0):
     '''

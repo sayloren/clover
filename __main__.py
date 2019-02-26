@@ -8,18 +8,46 @@ from question import question_one_pt_one,question_one_pt_two,question_one_pt_thr
 def get_args():
     parser = argparse.ArgumentParser(description="Description")
     parser.add_argument("-t","--threshold",type=int,default="70",help='the percentage at which to threshold true positives')
-    parser.add_argument("-g","--gap",type=int,default="21",help='the gap opening size to run as a range from 1')
-    parser.add_argument("-e","--gapext",type=int,default="6",help='the gap extention penalty to run as a range from 1')
+    parser.add_argument("-g","--gap",type=int,default="8",help='the gap opening size to run as a range from 1') # 21
+    parser.add_argument("-e","--gapext",type=int,default="3",help='the gap extention penalty to run as a range from 1') # 6
+    parser.add_argument("-m","--matrix",type=str,default="BLOSUM50",help='if runing a single pass, which matrix to use') # 6
     parser.add_argument("-s","--single",action='store_true',help='if want to run for a single set of gap and ext conditions rather than a range') # 15,3
     parser.add_argument("-i","--inmatrix",action='store_true',help='if data file should be read in, other wise the algorithm is run and the matrix generated')
     return parser.parse_args()
 
+def run_sw_and_split_out(pairs,m,gap,gap_ext):
+    '''
+    run the smith waterman alg and split the scoring and source matrices into
+    two outputs
+    '''
+    out = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in pairs]
+    return [x[0] for x in out],[x[1] for x in out]
+
+def get_rates(threshold,scores):
+    '''
+    get the false and true positive rates
+    '''
+    return sum([x > threshold for x in scores])/len(scores)
+
+def get_norm_rates(threshold,min):
+    '''
+    get the normalized false and true positive rates
+    '''
+    return sum(list(compress(min, [x > threshold for x in min])))/len(min)
+
+def make_columns(value_a,value_b,length_a,length_b):
+    '''
+    make columns for output data frame
+    '''
+    return [value_a]*len(length_a) + [value_b]*len(length_b)
+
+
 def get_score_dfs(gap_ext,gap,m,pos_pairs,neg_pairs,threshold):
-    # 2) get matrix scoring fasta pair for each matrix
-    pos_out = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in pos_pairs]
-    pos_scores,pos_min = [p[0] for p in pos_out],[p[1] for p in pos_out]
-    neg_out = [smith_waterman(x.split()[0], x.split()[1],m,gap,gap_ext) for x in neg_pairs]
-    neg_scores,neg_min = [n[0] for n in neg_out],[n[1] for n in neg_out]
+    '''
+    make a df from the scoring matrices
+    '''
+    pos_scores,pos_min = run_sw_and_split_out(pos_pairs,m,gap,gap_ext)
+    neg_scores,neg_min = run_sw_and_split_out(neg_pairs,m,gap,gap_ext)
 
     # the index of the value from which to subset the sorted true positive list
     subset_index = int(len(pos_scores)-(len(pos_scores)*threshold/100)-1)
@@ -27,11 +55,12 @@ def get_score_dfs(gap_ext,gap,m,pos_pairs,neg_pairs,threshold):
     norm_threshold = sorted(pos_min)[subset_index]
 
     # 3) get the false and true positive rates
-    false_pos = sum([x > threshold for x in neg_scores])/len(neg_scores)
-    true_pos = sum([x > threshold for x in pos_scores])/len(pos_scores)
+    false_pos = get_rates(threshold,neg_scores)
+    true_pos - get_rates(threshold,pos_scores)
 
-    false_norm = sum(list(compress(neg_min, [x > norm_threshold for x in neg_min])))/len(neg_min)
-    true_norm = sum(list(compress(pos_min, [x > norm_threshold for x in pos_min])))/len(pos_min)
+    # get the normalized false and true positive rates
+    false_norm = get_norm_rates(norm_threshold,neg_min)
+    true_norm = get_norm_rates(norm_threshold,pos_min)
 
     # get the gap, gap extention, false and true positives
     out = [true_pos,false_pos,gap,gap_ext,m,true_norm,false_norm]
@@ -39,11 +68,12 @@ def get_score_dfs(gap_ext,gap,m,pos_pairs,neg_pairs,threshold):
     # collect the scores and other values for making roc curve
     all_score = pos_scores + neg_scores
     all_norm = pos_min + neg_min
-    all_matrix = [m]*len(pos_scores) + [m]*len(neg_scores)
-    all_labels = [1]*len(pos_scores) + [0]*len(neg_scores)
-    all_gaps = [gap]*len(pos_scores) + [gap]*len(neg_scores)
-    all_ext = [gap_ext]*len(pos_scores) + [gap_ext]*len(neg_scores)
-    pd_scores = pd.DataFrame({'scores':all_score,'norm_scores':all_norm,'matrix':all_matrix,'labels':all_labels,'gap':all_gaps,'ext':all_ext})
+    all_matrix = make_columns(m,m,pos_scores,neg_scores)
+    all_labels = make_columns(1,0,pos_scores,neg_scores)
+    all_gaps = make_columns(gap,gap,pos_scores,neg_scores)
+    all_ext = make_columns(gap_ext,gap_ext,pos_scores,neg_scores)
+    pd_scores = pd.DataFrame({'scores':all_score,'norm_scores':all_norm,
+        'matrix':all_matrix,'labels':all_labels,'gap':all_gaps,'ext':all_ext})
 
     return out,pd_scores
 
@@ -64,27 +94,27 @@ def main():
         pd_scores = pd.read_csv('score_run.csv',sep='\t')
     else:
         # iterate through matrices, gap and gap extention sizes
-        for m in os.listdir('matrices'):
 
-            # if just want to run for a single gap and extention value
-            if args.single:
-                out,pd_scores = get_score_dfs(args.gapext,args.gap,m,pos_pairs,neg_pairs,args.threshold)
-                collect.append(out)
-                collect_scores.append(pd_scores)
+        # if just want to run for a single gap and extention value
+        if args.single:
+            out,pd_scores = get_score_dfs(args.gapext,args.gap,args.matrix,pos_pairs,neg_pairs,args.threshold)
+            collect.append(out)
+            collect_scores.append(pd_scores)
 
-            # if just want to run for a range of gap and extention values
-            else:
+        # if just want to run for a range of gap and extention values
+        else:
+            for m in os.listdir('matrices'):
                 for gap_ext in range(1,args.gapext):
                     for gap in range(1,args.gap):
                         out,pd_scores = get_score_dfs(gap_ext,gap,m,pos_pairs,neg_pairs,args.threshold)
                         collect.append(out)
                         collect_scores.append(pd_scores)
 
-        pd_collect = pd.DataFrame(collect,columns=['true','false','gap','ext','matrix','t_min','f_min'])
-        pd_collect.to_csv('rate_run.csv',sep='\t',index=False)
+    pd_collect = pd.DataFrame(collect,columns=['true','false','gap','ext','matrix','t_min','f_min'])
+    pd_collect.to_csv('rate_run.csv',sep='\t',index=False)
 
-        pd_scores = pd.concat(collect_scores,axis=0)
-        pd_scores.to_csv('score_run.csv',sep='\t',index=False)
+    pd_scores = pd.concat(collect_scores,axis=0)
+    pd_scores.to_csv('score_run.csv',sep='\t',index=False)
 
     # question 1.1
     # get gap/ext values for best false positive rate in BLOSUM50 matrices
