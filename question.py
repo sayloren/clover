@@ -114,6 +114,20 @@ def label_thresholded_scores(threshold,scores):
     '''
     return [1 if x > threshold else 0 for x in scores]
 
+# def get_threshold_location(pd_scores,threshold):
+# My attempt to graph the distriubtions of false and tru positives
+#     negatives = pd_scores.loc[pd_scores['labels']==threshold]
+#     subset_index = int(len(negatives['scores'])-(len(negatives['scores'])*(threshold/100))-1)
+#     print(subset_index)
+#     print(subset_index)
+#     print(sorted(negatives['scores']))
+#     thresh_loc = sorted(negatives['scores'])[subset_index]
+#     print(thresh_loc)
+#     return thresh_loc
+    # pd_stats_0,pd_scores_0 = get_score_dfs(gap_ext,gap,matrix,pos_pairs[:8],neg_pairs[:8],0)
+    # thresh_loc_0 = get_threshold_location(pd_scores_0,0)
+    # plot_distributions(pd_scores_0,matrix,0)
+
 def question_two_pt_one(pd_scores,gap_ext,gap,matrix,pos_pairs,neg_pairs,threshold):
     '''
     modify starting score matrix
@@ -124,48 +138,15 @@ def question_two_pt_one(pd_scores,gap_ext,gap,matrix,pos_pairs,neg_pairs,thresho
     pos_pairs = [line.strip() for line in open('pairs/Pospairs.txt','r')]
     neg_pairs = [line.strip() for line in open('pairs/Negpairs.txt','r')]
 
-    num_iterations = 20 # number of iterations over which to optimize
-    num_permutations = 10 # number of permuted matrices to make
-
-    plot_distributions(pd_scores,matrix,threshold)
-
+    # num_iterations = 20 # number of iterations over which to optimize
+    # num_permutations = 10 # number of permuted matrices to make
     # for i in range(num_iterations):
     #     collect_matrices = []
     #     cost_values = cost_matrix.values
     #     for j in range(num_permutations):
     #         cost_random = np.random.permutation(cost_values)
     #         cost_sym = np.tril(cost_random) + np.tril(cost_random, -1).T
-    pd_stats_0,pd_scores_0 = get_score_dfs(gap_ext,gap,matrix,pos_pairs[:8],neg_pairs[:8],0)
-    # pd_stats_1,pd_scores_1 = get_score_dfs(gap_ext,gap,cost_sym,pos_pairs[:8],neg_pairs[:8],10)
-    # pd_stats_2,pd_scores_2 = get_score_dfs(gap_ext,gap,cost_sym,pos_pairs[:8],neg_pairs[:8],20)
-    # pd_stats_3,pd_scores_3 = get_score_dfs(gap_ext,gap,cost_sym,pos_pairs[:8],neg_pairs[:8],30)
-    # pd_stats_3,pd_scores_4 = get_score_dfs(gap_ext,gap,matrix,pos_pairs[:8],neg_pairs[:8],40)
-    #         # sum the tpr
-
-    negatives = pd_scores_0.loc[pd_scores_0['labels']==0]
-    subset_index = int(len(negatives)-(len(negatives)*threshold/100)-1)
-    thresh_loc = sorted(negatives)[subset_index]
-
-    pd_scores['labels'] = pd_scores['scores'].apply(lambda x: label_thresholded_scores(thresh_loc,x))
-    plot_distributions(pd_scores_0,matrix,0)
-    # plot_distributions(pd_scores_1,matrix,10)
-    # plot_distributions(pd_scores_2,matrix,20)
-    # plot_distributions(pd_scores_3,matrix,30)
-    # plot_distributions(pd_scores_4,matrix,40)
-
-
-
-
-#     new_score = 1
-#     previous_score = 0
-#     for i in range(0,5):
-#         if previous_score < new_score < 4:
-#             new_score = evaluate(M, negpairs, pospairs)
-#             print(new_score)
-#             np.random.shuffle(M)
-#         else:
-#             a = np.random.rand(24, 24) #ensure the matrix is symmetric
-#             M = np.tril(a) + np.tril(a, -1).T #ensure the matrix is symmetric
-#             new_score = evaluate(M, negpairs, pospairs)
-#             np.random.shuffle(M)
-#     return M
+    #         pd_stats_0,pd_scores_0 = get_score_dfs(gap_ext,gap,cost_sym,pos_pairs[:8],neg_pairs[:8],0)
+            # evaluate the score
+            # if the matrix is a reasonable improvment, add to the collection and shuffle
+            # else discard
